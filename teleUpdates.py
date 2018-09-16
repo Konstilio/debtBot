@@ -25,7 +25,6 @@ class Dispatcher:
 
     def processUpdate(self, update):
         if "message" in update:
-            print("HERE1")
             message = update["message"]
             text = message["text"]
             if text.startswith('/'):
@@ -36,7 +35,6 @@ class Dispatcher:
                 if self.textCallback:
                     self.textCallback(message)
         elif "callback_query" in update:
-            print("HERE2")
             callback_query = update["callback_query"]
             data = callback_query["data"]
             if data in self.callbackHandlers:

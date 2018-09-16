@@ -10,19 +10,19 @@ from teleUpdates import MessageHandler, CallbackHandler, Dispatcher
 
 USERS_TABLE = os.environ['USERS_TABLE']
 IS_OFFLINE = os.environ.get('IS_OFFLINE')
+bot_token = os.environ.get('DEBT_BOT_TOKEN')
 
 if IS_OFFLINE:
-    client = boto3.client(
+    resourceDB = boto3.resource(
         'dynamodb',
         region_name='localhost',
-        endpoint_url='http://localhost:5000'
+        endpoint_url='http://localhost:8000'
     )
 else:
-    client = boto3.client('dynamodb')
+    resourceDB = boto3.resource('dynamodb')
 
 app = Flask(__name__)
 
-bot_token = "625324478:AAHwqiUfVvpo3MxrrBwSMb0kf-v56Q8rlnc"
 bot = telebot.TeleBot(bot_token)
 dispather = Dispatcher()
 
@@ -39,10 +39,10 @@ def text(message):
     bot.send_message(message["from"]["id"], message["text"])
 
 def onLend(callbackQuery):
-    bot.send_message(callbackQuery["from"]["id"], "Yes")
+    bot.answer_callback_query(callbackQuery["id"])
 
 def onBorrow(callbackQuery):
-    bot.send_message(callbackQuery["from"]["id"], "No")
+    bot.answer_callback_query(callbackQuery["id"])
 
 
 startHandler = MessageHandler("start", start)
@@ -63,4 +63,26 @@ def bot_main():
 
 @app.route("/test", methods=["GET"])
 def test():
+    app.logger.info("token = " + bot_token)
     return jsonify({'test': "OK"})
+
+@app.route("/testDB", methods=["GET"])
+def testDB():
+    chatId = 447198168
+    table = resourceDB.Table(USERS_TABLE)
+
+    item = {}
+    item['chatId'] = chatId
+    item['data'] = {'Vasia': 200, 'Petia': 100}
+
+    table.put_item(Item=item)
+
+    return jsonify({'testDB': "OK"})
+
+@app.route("/all", methods=["GET"])
+def all():
+    chatId = 447198168
+    table = resourceDB.Table(USERS_TABLE)
+    response = table.get_item(Key={'chatId':chatId})
+    print(response['Item'])
+    return jsonify({'all': "OK"})
