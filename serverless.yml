@@ -8,7 +8,8 @@ plugins:
   - serverless-dynamodb-local
 
 custom:
-  tableName: 'telegramChatTable-${self:provider.stage}'
+  tableUsersName: 'telegramChatTable-${self:provider.stage}'
+  tableStatesName: 'stateChatTable-${self:provider.stage}'
   debtBotToken: '625324478:AAHwqiUfVvpo3MxrrBwSMb0kf-v56Q8rlnc'
   wsgi:
     app: app.app
@@ -37,7 +38,8 @@ provider:
       Resource:
         - { "Fn::GetAtt": ["UsersDynamoDBTable", "Arn" ] }
   environment:
-    USERS_TABLE: ${self:custom.tableName}
+    USERS_TABLE: ${self:custom.tableUsersName}
+    STATES_TABLE: ${self:custom.tableStatesName}
     DEBT_BOT_TOKEN: ${self:custom.debtBotToken}
 
 functions:
@@ -63,4 +65,20 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
-        TableName: ${self:custom.tableName}
+        TableName: ${self:custom.tableUsersName}
+    StatesDynamoDBTable:
+      Type: 'AWS::DynamoDB::Table'
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: chatId
+            AttributeType: N
+        KeySchema:
+          -
+            AttributeName: chatId
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:custom.tableStatesName}
+	

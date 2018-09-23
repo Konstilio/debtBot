@@ -24,3 +24,14 @@ class UsersTableResource:
         table = resourceDB.Table(USERS_TABLE)
         response = table.get_item(Key={'chatId': chatId})
         return response['Item']
+
+    def getCurrentUsers(self, chatId):
+        table = resourceDB.Table(USERS_TABLE)
+        response = table.get_item(Key={'chatId': chatId})
+
+        if not 'Item' in response:
+            return []
+        if not 'data' in response['Item']:
+            return []
+
+        return response['Item']['data'].keys()
