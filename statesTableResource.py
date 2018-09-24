@@ -9,6 +9,8 @@ class State:
     BORROW_USER_SELECTED = 5
     LEND_USER_NEW = 6
     BORROW_USER_NEW = 7
+    LEND_WAIT_CONTACT = 8
+    BORROW_WAIT_CONTACT = 9
 
 class StatesResource:
 
