@@ -45,6 +45,23 @@ class UsersTableResource:
 
         return item['data']
 
+    def getUserFromItemData(self, itemData, userName):
+        if userName not in itemData:
+            return None
+
+        userData = itemData[userName]
+
+        phone = userData['phone'] if 'phone' in userData else None
+        telegramId = userData['telegramId'] if 'telegramId' in userData else 0
+        return User(userName, phone, telegramId)
+
+    def getNumFromItemData(self, itemData, userName):
+        if userName not in itemData:
+            return 0
+
+        userData = itemData[userName]
+        return userData['num']
+
     def getCurrentUsers(self, chatId):
         table = resourceDB.Table(USERS_TABLE)
         response = table.get_item(Key={'chatId': chatId})

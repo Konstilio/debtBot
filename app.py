@@ -1,7 +1,6 @@
 # app.py
-
-import requests
 import os
+import requests
 import telebot
 import pprint
 import json
@@ -9,11 +8,12 @@ from decimal import Decimal
 from flask import Flask, jsonify, request
 from usersTableResource import UsersTableResource, User
 from statesTableResource import StatesResource, State
+from debtBot import DebtBot
 
 bot_token = os.environ.get('DEBT_BOT_TOKEN')
 app = Flask(__name__)
 
-bot = telebot.TeleBot(bot_token)
+bot = DebtBot(bot_token)
 utResource = UsersTableResource()
 stateResource = StatesResource()
 
@@ -47,11 +47,10 @@ def Status(message):
         bot.send_message(chatId, "You do not have any records")
     else:
         for key in data:
-            num = data[key]['num']
-            if num > 0:
-                bot.send_message(chatId, "%s owns you %0.2f" % (key, num))
-            elif num < 0:
-                bot.send_message(chatId, "You own %0.2f to %s" % (-num, key))
+            user = utResource.getUserFromItemData(data, key)
+            num = utResource.getNumFromItemData(data, key)
+            bot.sendUserStatusMessage(chatId, user, num)
+
     stateResource.setState(chatId, State.SLEEP)
 
 def setupUsersMarkup(chatID, actionName, actionNewName, actionContactName):
