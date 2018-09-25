@@ -19,16 +19,22 @@ stateResource = StatesResource()
 
 @bot.message_handler(commands=['start'])
 def start(message):
-    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    markup = telebot.types.InlineKeyboardMarkup(row_width=3)
     btnLend = telebot.types.InlineKeyboardButton('Lend')
     btnLend.callback_data = 'Lend'
     btnBorrow = telebot.types.InlineKeyboardButton('Borrow')
     btnBorrow.callback_data = 'Borrow'
-    markup.add(btnLend, btnBorrow)
+    btnClose = telebot.types.InlineKeyboardButton('Close')
+    btnClose.callback_data = 'Close'
+    markup.add(btnLend, btnBorrow, btnClose)
 
     chatId = message.chat.id
     bot.send_message(chatId, "Choose action:", reply_markup=markup)
     stateResource.setState(chatId, State.SLEEP)
+
+@bot.message_handler(commands=['help'])
+def Help(message):
+    bot.sendGeneralHelpMessage(message.chat.id)
 
 @bot.message_handler(commands=['lend'])
 def onLendCommand(message):
@@ -38,18 +44,24 @@ def onLendCommand(message):
 def onBorrowCommand(message):
     Borrow(message.chat.id)
 
+@bot.message_handler(commands=['close'])
+def onBorrowCommand(message):
+    Close(message.chat.id)
+
 @bot.message_handler(commands=['status'])
 def Status(message):
     chatId = message.chat.id
     data = utResource.getItemData(chatId)
 
-    if not data:
+    sent = False
+
+    for key in data:
+        user = utResource.getUserFromItemData(data, key)
+        num = utResource.getNumFromItemData(data, key)
+        sent = bot.sendUserStatusMessage(chatId, user, num) or sent
+
+    if not sent:
         bot.send_message(chatId, "You do not have any records")
-    else:
-        for key in data:
-            user = utResource.getUserFromItemData(data, key)
-            num = utResource.getNumFromItemData(data, key)
-            bot.sendUserStatusMessage(chatId, user, num)
 
     stateResource.setState(chatId, State.SLEEP)
 
@@ -72,6 +84,20 @@ def setupUsersMarkup(chatID, actionName, actionNewName, actionContactName):
 
     return markup
 
+def setupCloseMarkup(chatID):
+    users = utResource.getCurrentUsers(chatID)
+    if not users:
+        return None
+
+    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    for user in users:
+        btn = telebot.types.InlineKeyboardButton(user)
+        btnData = {"ActionClose": user};
+        btn.callback_data = json.dumps(btnData)
+        markup.add(btn)
+
+    return markup
+
 @bot.callback_query_handler(func=lambda callbackQuery: callbackQuery.data == 'Lend')
 def onLend(callbackQuery):
     bot.answer_callback_query(callbackQuery.id)
@@ -91,6 +117,21 @@ def Borrow(chatId):
     markup = setupUsersMarkup(chatId, "ActionBorrow", "ActionBorrowNew", "ActionBorrowContact")
     bot.send_message(chatId, "Select user to borrow money from: ", reply_markup=markup)
     stateResource.setState(chatId, State.BORROW)
+
+@bot.callback_query_handler(func=lambda callbackQuery: callbackQuery.data == 'Close')
+def onClose(callbackQuery):
+    bot.answer_callback_query(callbackQuery.id)
+    Close(callbackQuery.from_user.id)
+
+def Close(chatId):
+    markup = setupCloseMarkup(chatId)
+    if not markup:
+        bot.send_message(chatId, "You do not have any records")
+        stateResource.setState(chatId, State.SLEEP)
+        return
+
+    bot.send_message(chatId, "Select user record to close:", reply_markup=markup)
+    stateResource.setState(chatId, State.CLOSE)
 
 @bot.callback_query_handler(func=lambda callbackQuery: callbackQuery.data in ['ActionLendNew', 'ActionBorrowNew'])
 def onCreateNewUser(callbackQuery):
@@ -179,6 +220,26 @@ def onBorrowUserSelected(callbackQuery):
 
     bot.send_message(chatId, "How much do you want to borrow from %s ?" % userName)
     stateResource.setState(chatId, State.BORROW_USER_SELECTED, {"userName": userName})
+
+@bot.callback_query_handler(func=lambda callbackQuery: 'ActionClose' in json.loads(callbackQuery.data))
+def onCloseUserSelected(callbackQuery):
+    bot.answer_callback_query(callbackQuery.id, "I got it")
+
+    chatId = callbackQuery.from_user.id
+    stateItem = stateResource.getItem(chatId)
+    state = stateResource.getStateFromItem(stateItem)
+
+    if state != State.CLOSE:
+        bot.send_message(chatId, "Oops, try again")
+        stateResource.setState(chatId, State.SLEEP)
+        return
+
+    data = json.loads(callbackQuery.data)
+    userName = data['ActionClose']
+    utResource.closeRecord(chatId, User(userName))
+
+    bot.send_message(chatId, "Your lend/borrow balance with {} is 0 now".format(userName))
+    stateResource.setState(chatId, State.SLEEP)
 
 @bot.message_handler(content_types=['text'])
 def text(message):

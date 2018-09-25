@@ -11,7 +11,6 @@ class UsersTableResource:
     def mergeRecord(self, chatId, user, num):
         table = resourceDB.Table(USERS_TABLE)
         response = table.get_item(Key={'chatId': chatId})
-        print(response)
         if 'Item' in response:
             item = response['Item']
             data = item['data']
@@ -31,6 +30,22 @@ class UsersTableResource:
                 item['data'][user.userName]['telegramId'] = user.telegramId
 
         table.put_item(Item = item)
+
+    def closeRecord(self, chatId, user):
+        table = resourceDB.Table(USERS_TABLE)
+        response = table.get_item(Key={'chatId': chatId})
+        if not 'Item' in response:
+            return
+
+        item = response['Item']
+        data = item['data']
+
+        if not user.userName in data:
+            return
+
+        data[user.userName]['num'] = 0
+        table.put_item(Item=item)
+
 
     def getItemData(self, chatId):
         table = resourceDB.Table(USERS_TABLE)

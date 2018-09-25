@@ -11,6 +11,7 @@ class State:
     BORROW_USER_NEW = 7
     LEND_WAIT_CONTACT = 8
     BORROW_WAIT_CONTACT = 9
+    CLOSE = 10
 
 class StatesResource:
 
